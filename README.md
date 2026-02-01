@@ -1,135 +1,214 @@
-# Turborepo starter
+# medusa-trpc
 
-This Turborepo starter is maintained by the Turborepo core team.
+A Proof of Concept (POC) demonstrating how to use Medusa modules outside of the main Medusa application in a serverless/edge environment.
 
-## Using this example
+## Overview
 
-Run the following command:
+This monorepo contains:
 
-```sh
-npx create-turbo@latest
+- **`packages/medusa-serverless`** - A package that initializes Medusa modules for use in serverless environments
+- **`apps/storefront`** - A Next.js storefront demonstrating the integration with tRPC
+
+## packages/medusa-serverless
+
+A lightweight package for initializing Medusa modules (Cart, Product, etc.) outside of the Medusa framework. This allows you to use Medusa's powerful commerce modules in any Node.js environment - tRPC, Hono.js, Express, or serverless functions.
+
+### Installation
+
+```bash
+bun add @rigby-software-house/medusa-serverless
 ```
 
-## What's inside?
+### Usage
 
-This Turborepo includes the following packages/apps:
+```typescript
+import { initialize } from "@rigby-software-house/medusa-serverless";
+import { Modules } from "@medusajs/framework/utils";
 
-### Apps and Packages
+const medusa = await initialize({
+  dbConnectionString: "postgres://...",
+  modules: [Modules.CART, Modules.PRODUCT],
+});
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+// Type-safe access to modules
+const cart = await medusa.cart.createCarts({ currency_code: "usd" });
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### Type Inference
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+The `initialize` function uses `InferLoadedModules` type to provide type-safe access to only the modules you've loaded:
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+```typescript
+// Only cart module loaded - medusa.product would be a type error
+const medusa = await initialize({
+  dbConnectionString: "...",
+  modules: [Modules.CART],
+});
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+medusa.cart; // ICartModuleService
+medusa.product; // Type error - not loaded
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### Supported Modules
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+- `Modules.CART` - Cart management
+- `Modules.PRODUCT` - Product catalog
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+## apps/storefront
 
-### Remote Caching
+A Next.js application demonstrating the integration of `medusa-serverless` with tRPC.
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+### tRPC Context Integration
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+The Medusa modules are injected into the tRPC context:
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+```typescript
+// src/server/api/trpc.ts
+import { initialize } from "@rigby-software-house/medusa-serverless";
 
-```
-cd my-turborepo
+export const createTRPCContext = async (opts: { headers: Headers }) => {
+  const medusa = await initialize({
+    dbConnectionString: env.DATABASE_URL,
+    modules: ["cart"],
+  });
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+  return {
+    db,
+    medusa,
+    ...opts,
+  };
+};
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+### Using in tRPC Routers
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+Access Medusa services through the context in your routers:
+
+```typescript
+// src/server/api/routers/cart.ts
+export const cartRouter = createTRPCRouter({
+  create: publicProcedure
+    .input(z.object({ currencyCode: z.string().length(3).default("usd") }))
+    .mutation(async ({ ctx, input }) => {
+      const cart = await ctx.medusa.cart.createCarts({
+        currency_code: input.currencyCode,
+      });
+      return cart;
+    }),
+
+  retrieve: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.medusa.cart.retrieveCart(input.id, {
+        relations: ["items", "shipping_address", "billing_address"],
+      });
+    }),
+
+  addLineItem: publicProcedure
+    .input(
+      z.object({
+        cartId: z.string(),
+        productId: z.number(),
+        quantity: z.number().int().positive(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Combine with your own database
+      const product = await ctx.db.query.products.findFirst({
+        where: (products, { eq }) => eq(products.id, input.productId),
+      });
+
+      return ctx.medusa.cart.addLineItems(input.cartId, [
+        {
+          quantity: input.quantity,
+          title: product.name,
+          unit_price: product.price,
+        },
+      ]);
+    }),
+});
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- Bun
+- PostgreSQL
+
+### Setup
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/vholik/medusa-trpc.git
+cd medusa-trpc
+```
+
+2. Install dependencies:
+
+```bash
+bun install
+```
+
+3. Create a PostgreSQL database:
+
+```bash
+psql -c "CREATE DATABASE storefront;"
+```
+
+4. Set up environment variables in `apps/storefront/.env`:
 
 ```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+DATABASE_URL="postgresql://postgres:password@localhost:5432/storefront"
 ```
 
-## Useful Links
+5. Run database migrations:
 
-Learn more about the power of Turborepo:
+```bash
+cd apps/storefront
+bun drizzle-kit push
+```
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+6. Start the development server:
+
+```bash
+bun dev
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Next.js Storefront                    │
+├─────────────────────────────────────────────────────────┤
+│                      tRPC Router                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │ cartRouter  │  │productRouter│  │   ...       │     │
+│  └──────┬──────┘  └──────┬──────┘  └─────────────┘     │
+│         │                │                              │
+│         ▼                ▼                              │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │              tRPC Context                        │   │
+│  │  ┌─────────┐  ┌──────────────────────────────┐  │   │
+│  │  │   db    │  │  medusa (medusa-serverless)  │  │   │
+│  │  │(Drizzle)│  │  └── cart: ICartModuleService│  │   │
+│  │  └────┬────┘  └──────────────┬───────────────┘  │   │
+│  └───────┼──────────────────────┼──────────────────┘   │
+│          │                      │                       │
+└──────────┼──────────────────────┼───────────────────────┘
+           │                      │
+           ▼                      ▼
+    ┌─────────────────────────────────────┐
+    │            PostgreSQL               │
+    │  ┌───────────┐  ┌───────────────┐  │
+    │  │  Drizzle  │  │    Medusa     │  │
+    │  │  Tables   │  │    Tables     │  │
+    │  └───────────┘  └───────────────┘  │
+    └─────────────────────────────────────┘
+```
+
+## License
+
+MIT

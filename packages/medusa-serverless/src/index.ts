@@ -1,6 +1,6 @@
 import { MedusaModule } from '@medusajs/modules-sdk'
 import { Modules } from '@medusajs/framework/utils'
-import { IProductModuleService, LoadedModule, type ICartModuleService } from '@medusajs/framework/types'
+import { type ICartModuleService } from '@medusajs/framework/types'
 import { createMedusaContainer, ContainerRegistrationKeys, ModulesSdkUtils } from "@medusajs/utils"
 import { asValue } from "awilix"
 
@@ -12,7 +12,6 @@ type InitOptions<TKeys extends Modules[]> = {
 
 type ModuleDefinitions = {
   [Modules.CART]: ICartModuleService
-  [Modules.PRODUCT]: IProductModuleService
 }
 
 type Prettify<T> = {
