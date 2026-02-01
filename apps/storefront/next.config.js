@@ -5,6 +5,16 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  serverExternalPackages: [
+    "better-sqlite3",
+    "@mikro-orm/core",
+    "@mikro-orm/knex",
+    "@mikro-orm/postgresql",
+    "@medusajs/framework",
+    "@medusajs/modules-sdk",
+    "@medusajs/utils"
+  ],
+};
 
 export default config;

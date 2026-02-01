@@ -11,7 +11,7 @@ import superjson from "superjson";
 import { ZodError } from "zod";
 
 import { db } from "~/server/db";
-import { getCartService } from "../medusa";
+import { initializeCartService } from "@rigby-software-house/medusa-serverless";
 import { env } from "~/env";
 
 /**
@@ -27,9 +27,11 @@ import { env } from "~/env";
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
-  const cartService = await getCartService({ dbConnectionString: env.DATABASE_URL })
+  const cartService = await initializeCartService({ dbConnectionString: env.DATABASE_URL })
+
   return {
     db,
+    cartService,
     ...opts,
   };
 };

@@ -16,9 +16,18 @@ export function LatestPost() {
     },
   });
 
+  const createCart = api.post.createCart.useMutation({
+    onSuccess: async (data) => {
+      console.log(data);
+    },
+  });
+
   return (
     <div className="w-full max-w-xs">
-      {latestPost ? (
+      <button
+       className="rounded-full bg-white/10 px-10 py-3 font-semibold transition hover:bg-white/20"
+      onClick={() =>createCart.mutate()}>Create Cart</button>
+      {/* {latestPost ? (
         <p className="truncate">Your most recent post: {latestPost.name}</p>
       ) : (
         <p>You have no posts yet.</p>
@@ -43,8 +52,8 @@ export function LatestPost() {
           disabled={createPost.isPending}
         >
           {createPost.isPending ? "Submitting..." : "Submit"}
-        </button>
-      </form>
+        </button> */}
+      {/* </form> */}
     </div>
   );
 }
