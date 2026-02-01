@@ -20,5 +20,11 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@medusajs/cart": "^2.13.1",
+    "@medusajs/framework": "^2.13.1",
+    "@medusajs/modules-sdk": "^2.13.1",
+    "@medusajs/utils": "^2.13.1"
+  }
 }
