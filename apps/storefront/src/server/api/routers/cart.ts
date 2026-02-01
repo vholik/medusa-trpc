@@ -11,7 +11,7 @@ export const cartRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const cart = await ctx.cartService.createCarts(
+      const cart = await ctx.medusa.cart.createCarts(
         {
           currency_code: input.currencyCode
         },
@@ -23,7 +23,7 @@ export const cartRouter = createTRPCRouter({
   retrieve: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const cart = await ctx.cartService.retrieveCart(input.id, {
+      const cart = await ctx.medusa.cart.retrieveCart(input.id, {
         relations: ["items", 'shipping_address', 'billing_address'],
         select: ['total', 'subtotal', 'tax_total', 'discount_total']
       });
@@ -51,7 +51,7 @@ export const cartRouter = createTRPCRouter({
         });
       }
 
-      const item = await ctx.cartService.addLineItems(input.cartId, [
+      const item = await ctx.medusa.cart.addLineItems(input.cartId, [
         {
           quantity: input.quantity,
           title: product.name,
@@ -70,7 +70,7 @@ export const cartRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const item = await ctx.cartService.updateLineItems([{
+      const item = await ctx.medusa.cart.updateLineItems([{
         id: input.lineItemId,
         quantity: input.quantity,
       }]);
@@ -85,12 +85,12 @@ export const cartRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      await ctx.cartService.deleteLineItems([input.lineItemId]);
+      await ctx.medusa.cart.deleteLineItems([input.lineItemId]);
     }),
 
   delete: publicProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.cartService.deleteCarts([input.id]);
+      await ctx.medusa.cart.deleteCarts([input.id]);
     }),
 });
